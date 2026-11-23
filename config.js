@@ -1,7 +1,7 @@
 // Встав сюди дані зі свого проєкту Supabase
 // (Project Settings → API / Data API).
 window.PREDMETY_CONFIG = {
-  SUPABASE_URL: "ВСТАВ_СЮДИ_Project_URL",          // напр. https://abcdxyz.supabase.co
-  SUPABASE_ANON_KEY: "ВСТАВ_СЮДИ_anon_public_key",  // довгий ключ, що починається з eyJ... або sb_publishable_...
-  LOGIN_DOMAIN: "predmety.app"                      // не чіпай
+  SUPABASE_URL: "https://ikunoqahrclfjzrgjpfn.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrdW5vcWFocmNsZmp6cmdqcGZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0MzEzNjUsImV4cCI6MjExMTAwNzM2NX0.nwui3Qt1ZHE90STp4oRbjHyDwJ-GdhOuO5c7v9bgNnw",
+  LOGIN_DOMAIN: "predmety.app"
 };
