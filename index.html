@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мої предмети</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f5f4ef; --card:#ffffff; --ink:#1f1e1c; --ink2:#3d3a35; --muted:#8a877f; --faint:#b9b6ad;
+    --line:#e7e4dc; --line2:#f0eee8; --hover:#faf9f6;
+    --acc:#d97757; --acc-ink:#b85c3d; --acc-soft:#fbeee8; --acc-mid:#f0c3b0;
+    --shadow:0 1px 2px rgba(31,30,28,.04),0 8px 28px -12px rgba(31,30,28,.14);
+  }
+  html[data-theme=dark]{
+    --bg:#262624; --card:#30302e; --ink:#f5f4ef; --ink2:#dcdad2; --muted:#9e9b93; --faint:#6f6d66;
+    --line:#41413d; --line2:#383835; --hover:#2c2c2a;
+    --acc:#d97757; --acc-ink:#ec9a78; --acc-soft:#4a3128; --acc-mid:#8f5440;
+    --shadow:0 1px 2px rgba(0,0,0,.2),0 8px 28px -12px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+  body,.stat,.panel,.thead,.tr,.labs,input,button{transition:background-color .25s,border-color .25s,color .25s}
+  .theme{display:flex;background:var(--line2);border-radius:10px;padding:3px;gap:2px}
+  .theme button{padding:6px 12px;font-size:13px;font-weight:500;color:var(--muted);border-radius:7px;white-space:nowrap}
+  .theme button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+  .hright{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+  @media (max-width:720px){ .hright{align-items:flex-start} }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 20px 80px}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:26px;flex-wrap:wrap}
+  h1{font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-size:34px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:6px 0 0}
+  .today{color:var(--muted);font-size:13px}
+
+  /* Stat cards */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+  @media (max-width:720px){ .stats{grid-template-columns:1fr} }
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow)}
+  .stat .t{display:flex;align-items:center;justify-content:space-between;color:var(--ink2);font-weight:500;font-size:15px}
+  .stat .t i{width:8px;height:8px;border-radius:50%;background:var(--acc)}
+  .stat .t i.g{background:var(--faint)} .stat .t i.m{background:var(--acc-mid)}
+  .stat .v{font-family:'Source Serif 4',Georgia,serif;font-size:40px;font-weight:500;margin:10px 0 2px;letter-spacing:-.02em;line-height:1}
+  .stat .v small{font-family:Inter,sans-serif;font-size:15px;color:var(--muted);font-weight:500;margin-left:4px;letter-spacing:0}
+  .stat .d{font-size:13px;color:var(--muted)}
+  .stat .d b{color:var(--acc-ink);font-weight:600}
+  .meter{height:6px;background:var(--line2);border-radius:99px;margin-top:14px;overflow:hidden}
+  .meter i{display:block;height:100%;background:var(--acc);border-radius:99px;width:0;transition:width .5s ease}
+
+  /* Main panel */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .toolbar{display:flex;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  form.add{display:flex;gap:8px;flex:1;min-width:260px}
+  input[type=text]{flex:1;min-width:0;font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+  input[type=text]::placeholder{color:var(--faint)}
+  input[type=text]:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+  button{font:inherit;cursor:pointer;border:none;background:transparent;color:var(--ink2);border-radius:8px;transition:background .15s,color .15s}
+  .btn{background:var(--acc);color:#fff;font-weight:500;padding:9px 16px;border-radius:10px}
+  .btn:hover{background:var(--acc-ink)}
+  .seg{display:flex;background:var(--line2);border-radius:10px;padding:3px;gap:2px}
+  .seg button{padding:6px 11px;font-size:13px;color:var(--muted);font-weight:500;border-radius:7px;white-space:nowrap}
+  .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .seg button span{color:var(--faint);margin-left:3px}
+
+  /* Table */
+  .thead,.tr{display:grid;grid-template-columns:28px 1fr 170px 130px 64px;align-items:center;gap:12px;padding:0 16px}
+  .thead{height:38px;color:var(--muted);font-size:12px;font-weight:500;background:var(--hover);border-bottom:1px solid var(--line)}
+  .tr{min-height:56px;border-bottom:1px solid var(--line2);cursor:default}
+  .tr:hover{background:var(--hover)}
+  .check{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--faint);display:grid;place-items:center;padding:0;color:#fff;font-size:12px}
+  .check:hover{border-color:var(--acc)}
+  .check.on{background:var(--acc);border-color:var(--acc)}
+  .nm{font-weight:500;color:var(--ink);word-break:break-word;display:flex;align-items:center;gap:8px;min-width:0}
+  .tr.done .nm{color:var(--muted)}
+  .nm input{width:100%}
+  .exp{color:var(--faint);font-size:11px;padding:4px 6px;flex:none}
+  .exp:hover{color:var(--acc-ink);background:var(--acc-soft)}
+  .segs{display:flex;gap:3px;align-items:center;flex-wrap:wrap}
+  .segs i{width:14px;height:18px;border-radius:3px;background:var(--line)}
+  .segs i.s1{background:var(--acc-mid)} .segs i.s2{background:var(--acc)}
+  .segs em{font-style:normal;color:var(--faint);font-size:12px}
+  .segs .cnt{font-size:12px;color:var(--muted);margin-left:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:500;white-space:nowrap}
+  .chip.ok{background:var(--acc-soft);color:var(--acc-ink)}
+  .chip.no{background:var(--line2);color:var(--muted)}
+  .chip.wait{background:var(--card);color:var(--acc-ink);box-shadow:inset 0 0 0 1px var(--acc-mid)}
+  .acts{display:flex;justify-content:flex-end;gap:2px}
+  .icon{padding:5px 7px;color:var(--faint);font-size:13px;line-height:1}
+  .icon:hover{color:var(--ink2);background:var(--line2)}
+  .confirm{display:flex;gap:4px;justify-content:flex-end}
+  .confirm button{padding:4px 8px;font-size:12px;font-weight:500}
+  .confirm .yes{background:var(--acc);color:#fff} .confirm .cancel{background:var(--line2)}
+
+  /* Labs */
+  .labs{background:var(--hover);border-bottom:1px solid var(--line2);padding:6px 16px 14px 56px}
+  .lab{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .lab:last-of-type{border-bottom:none}
+  .lab .ln{flex:1;min-width:0;color:var(--ink2);word-break:break-word}
+  .lab.s2 .ln{color:var(--muted)}
+  .lab .ln input{width:100%;padding:6px 10px}
+  .ldot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+  .lab.s1 .ldot{background:var(--acc-mid)} .lab.s2 .ldot{background:var(--acc)}
+  .lst{padding:4px 10px;border-radius:99px;font-size:12px;font-weight:500;white-space:nowrap}
+  .lab.s0 .lst{background:var(--line2);color:var(--muted)}
+  .lab.s1 .lst{background:var(--card);color:var(--acc-ink);box-shadow:inset 0 0 0 1px var(--acc-mid)}
+  .lab.s2 .lst{background:var(--acc-soft);color:var(--acc-ink)}
+  .lst:hover{filter:brightness(.96)}
+  form.addlab{display:flex;gap:6px;margin-top:10px;max-width:460px}
+  form.addlab input{padding:7px 11px;font-size:13px}
+  form.addlab button{padding:7px 12px;font-size:13px;font-weight:500;background:var(--card);border:1px solid var(--line);color:var(--ink2)}
+  form.addlab button:hover{border-color:var(--acc);color:var(--acc-ink)}
+  .hint{font-size:12px;color:var(--faint);margin-top:8px}
+
+  .empty{text-align:center;color:var(--muted);padding:52px 16px}
+  .empty b{display:block;font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-size:20px;color:var(--ink2);margin-bottom:4px}
+  .foot{display:flex;justify-content:space-between;padding:12px 16px;color:var(--muted);font-size:12px}
+  .save{position:fixed;bottom:16px;right:16px;font-size:12px;color:var(--ink2);background:var(--card);border:1px solid var(--line);padding:7px 12px;border-radius:10px;box-shadow:var(--shadow);opacity:0;transition:opacity .3s}
+  .save.show{opacity:1}
+
+  @media (max-width:720px){
+    .thead{display:none}
+    .tr{grid-template-columns:28px 1fr auto;grid-template-areas:"c n a" ". l s";row-gap:6px;padding:12px 14px}
+    .tr>.c1{grid-area:c} .tr>.c2{grid-area:n} .tr>.c3{grid-area:l} .tr>.c4{grid-area:s;justify-self:end} .tr>.c5{grid-area:a}
+    .labs{padding-left:20px}
+    h1{font-size:28px}
+  }
+  .login{min-height:70vh;display:grid;place-items:center}
+  .lcard{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:var(--shadow)}
+  .lcard h2{font-family:'Source Serif 4',Georgia,serif;font-weight:500;font-size:26px;margin:0 0 4px}
+  .lcard p{color:var(--muted);margin:0 0 20px}
+  .lcard label{display:block;font-size:13px;color:var(--ink2);margin:12px 0 6px;font-weight:500}
+  .lcard input{width:100%}
+  .lcard .btn{width:100%;margin-top:18px;padding:11px}
+  .err{color:var(--acc-ink);font-size:13px;margin-top:12px;min-height:18px}
+  .userbar{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+  .userbar button{padding:5px 10px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--ink2)}
+  .userbar button:hover{border-color:var(--acc);color:var(--acc-ink)}
+  .loading{text-align:center;color:var(--muted);padding:80px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Мої предмети</h1>
+      <p class="sub">Закриті предмети, лаби і захисти</p>
+    </div>
+    <div class="hright">
+      <div class="theme" id="theme"><button data-t="light">☀ День</button><button data-t="dark">☾ Ніч</button></div>
+      <div class="today" id="today"></div>
+      <div class="userbar" id="userbar"></div>
+    </div>
+  </header>
+  <div id="app"></div>
+</div>
+<div class="save" id="save"></div>
+
+<script>
+(function(){
+  const LAB_LABELS = ['Не здав', 'Треба захист', 'Захистив'];
+  const CACHE_KEY = 'predmety-cache-v2';
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+  // ---------- Тема: день / ніч ----------
+  const TH_KEY = 'predmety-theme';
+  function applyTheme(t){
+    document.documentElement.setAttribute('data-theme', t);
+    document.querySelectorAll('#theme button').forEach(b => b.classList.toggle('on', b.dataset.t===t));
+  }
+  let theme = null;
+  try { theme = localStorage.getItem(TH_KEY); } catch(e){}
+  if(theme!=='light' && theme!=='dark') theme = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  applyTheme(theme);
+  document.querySelectorAll('#theme button').forEach(b => b.onclick = () => {
+    applyTheme(b.dataset.t);
+    try { localStorage.setItem(TH_KEY, b.dataset.t); } catch(e){}
+  });
+  try { $('#today').textContent = new Date().toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'}); } catch(e){}
+
+  // ---------- Supabase ----------
+  const cfg = window.PREDMETY_CONFIG || {};
+  const configured = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && !/ВСТАВ|PASTE/i.test(cfg.SUPABASE_URL + cfg.SUPABASE_ANON_KEY);
+  const sb = (configured && window.supabase) ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
+  const DOMAIN = cfg.LOGIN_DOMAIN || 'predmety.app';
+  const toEmail = login => login.includes('@') ? login.trim() : login.trim().toLowerCase() + '@' + DOMAIN;
+
+  let user = null;
+  let state = {subjects:[]};
+  let filter = 'all', editing = null, deleting = null;
+  const open = new Set();
+  let timer = null, saving = false, dirty = false;
+
+  function showSave(t){ const el=$('#save'); el.textContent=t; el.classList.add('show'); if(t==='Збережено') setTimeout(()=>el.classList.remove('show'),1500); }
+
+  function normalize(d){
+    if(!d || !Array.isArray(d.subjects)) d = {subjects:[]};
+    d.subjects.forEach(s => { if(!Array.isArray(s.labs)) s.labs = []; });
+    return d;
+  }
+
+  async function load(){
+    const { data, error } = await sb.from('tracker').select('data').eq('user_id', user.id).maybeSingle();
+    if(error) throw error;
+    return normalize(data ? data.data : null);
+  }
+
+  function persist(){
+    dirty = true;
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(state)); } catch(e){}
+    showSave('Зберігаю…');
+    clearTimeout(timer);
+    timer = setTimeout(saveNow, 700);
+  }
+  async function saveNow(){
+    if(!user) return;
+    saving = true;
+    const { error } = await sb.from('tracker').upsert({ user_id: user.id, data: state, updated_at: new Date().toISOString() });
+    saving = false;
+    if(error){ showSave('Не вдалося зберегти — перевір інтернет'); return; }
+    dirty = false; showSave('Збережено');
+  }
+
+  // Коли повертаєшся на вкладку — підтягнути зміни з інших пристроїв
+  document.addEventListener('visibilitychange', async () => {
+    if(document.visibilityState==='visible' && user && !dirty && !saving && editing===null){
+      try { state = await load(); render(); } catch(e){}
+    }
+  });
+
+  // ---------- Екрани ----------
+  function renderUserbar(){
+    $('#userbar').innerHTML = user ? `<span>${esc((user.email||'').split('@')[0])}</span><button id="logout">Вийти</button>` : '';
+    if(user) $('#logout').onclick = async () => { await sb.auth.signOut(); user=null; state={subjects:[]}; try{localStorage.removeItem(CACHE_KEY);}catch(e){} renderUserbar(); renderLogin(); };
+  }
+
+  function renderSetup(){
+    $('#app').innerHTML = `<div class="login"><div class="lcard"><h2>Майже готово</h2>
+      <p>Сайт ще не підключений до бази. Відкрий файл <b>config.js</b> і встав туди адресу та ключ з Supabase (див. інструкцію).</p></div></div>`;
+  }
+
+  function renderLogin(msg){
+    $('#app').innerHTML = `<div class="login"><form class="lcard" id="loginForm">
+      <h2>Вхід</h2><p>Твої предмети на будь-якому пристрої</p>
+      <label for="lg">Логін</label><input type="text" id="lg" autocomplete="username" autocapitalize="none" required>
+      <label for="pw">Пароль</label><input type="password" id="pw" autocomplete="current-password" required style="flex:1;min-width:0;font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%">
+      <button class="btn" type="submit">Увійти</button>
+      <div class="err" id="err">${msg?esc(msg):''}</div>
+    </form></div>`;
+    $('#loginForm').onsubmit = async e => {
+      e.preventDefault();
+      $('#err').textContent = 'Входжу…';
+      const { data, error } = await sb.auth.signInWithPassword({ email: toEmail($('#lg').value), password: $('#pw').value });
+      if(error){ $('#err').textContent = 'Невірний логін або пароль'; return; }
+      user = data.user; await afterLogin();
+    };
+  }
+
+  async function afterLogin(){
+    renderUserbar();
+    $('#app').innerHTML = '<div class="loading">Завантажую…</div>';
+    try { state = await load(); }
+    catch(e){
+      let cached = null; try { cached = JSON.parse(localStorage.getItem(CACHE_KEY)||'null'); } catch(_){}
+      state = normalize(cached);
+      showSave('Немає зв’язку з базою — показую збережене локально');
+    }
+    render();
+  }
+
+  // ---------- Трекер ----------
+  const findSubj = id => state.subjects.find(s=>s.id===id);
+  function findLab(id){ for(const s of state.subjects){ const l=s.labs.find(x=>x.id===id); if(l) return [s,l]; } return [null,null]; }
+  const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+
+  function render(){
+    const all = state.subjects;
+    const done = all.filter(s=>s.done).length;
+    const left = all.length - done;
+    const labs = all.flatMap(s=>s.labs);
+    const labsDone = labs.filter(l=>l.st===2).length;
+    const toDefend = labs.filter(l=>l.st===1).length;
+    const notSub = labs.filter(l=>l.st===0).length;
+    const list = all.filter(s => filter==='all' ? true : filter==='done' ? s.done : filter==='todo' ? !s.done : s.labs.some(l=>l.st===1));
+    const defendSubj = all.filter(s=>s.labs.some(l=>l.st===1)).length;
+
+    $('#app').innerHTML = `
+      <div class="stats">
+        <div class="stat">
+          <div class="t">Закриті предмети <i></i></div>
+          <div class="v">${done}<small>/ ${all.length}</small></div>
+          <div class="d">${left ? `ще <b>${left}</b> не закрито` : (all.length ? 'усе закрито 🎉' : 'додай предмети нижче')}</div>
+          <div class="meter"><i style="width:${pct(done,all.length)}%"></i></div>
+        </div>
+        <div class="stat">
+          <div class="t">Лаби захищено <i class="m"></i></div>
+          <div class="v">${labsDone}<small>/ ${labs.length}</small></div>
+          <div class="d">${labs.length ? `${pct(labsDone,labs.length)}% від усіх лаб` : 'лаб ще немає'}</div>
+          <div class="meter"><i style="width:${pct(labsDone,labs.length)}%"></i></div>
+        </div>
+        <div class="stat">
+          <div class="t">Чекають захисту <i class="g"></i></div>
+          <div class="v">${toDefend}</div>
+          <div class="d">${notSub ? `і ще <b>${notSub}</b> не здано` : 'не зданих лаб немає'}</div>
+          <div class="meter"><i style="width:${pct(toDefend,labs.length)}%;background:var(--acc-mid)"></i></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="toolbar">
+          <form class="add" id="addForm">
+            <input type="text" id="newName" placeholder="Новий предмет, напр. Вища математика" maxlength="120" autocomplete="off">
+            <button class="btn" type="submit">Додати</button>
+          </form>
+          <div class="seg">
+            <button class="${filter==='all'?'on':''}" data-f="all">Усі<span>${all.length}</span></button>
+            <button class="${filter==='todo'?'on':''}" data-f="todo">Не закриті<span>${left}</span></button>
+            <button class="${filter==='done'?'on':''}" data-f="done">Закриті<span>${done}</span></button>
+            <button class="${filter==='defend'?'on':''}" data-f="defend">Захист<span>${defendSubj}</span></button>
+          </div>
+        </div>
+        ${list.length ? `
+          <div class="thead"><div></div><div>Предмет</div><div>Лаби</div><div>Статус</div><div></div></div>
+          ${list.map(rowHtml).join('')}
+          <div class="foot"><span>Показано ${list.length} з ${all.length}</span><span>Натисни ▸, щоб відкрити лаби</span></div>
+        ` : `<div class="empty"><b>${all.length ? 'Тут порожньо' : 'Поки що жодного предмета'}</b>${all.length ? 'Спробуй іншу вкладку' : 'Напиши назву вгорі й натисни «Додати»'}</div>`}
+      </div>`;
+    bind();
+  }
+
+  function tools(id){
+    return deleting===id
+      ? `<div class="confirm"><button class="yes" data-act="del-yes" data-id="${id}">Так</button><button class="cancel" data-act="del-no" data-id="${id}">Ні</button></div>`
+      : `<div class="acts"><button class="icon" title="Перейменувати" data-act="edit" data-id="${id}">✎</button><button class="icon" title="Видалити" data-act="del" data-id="${id}">✕</button></div>`;
+  }
+
+  function rowHtml(s){
+    const isOpen = open.has(s.id);
+    const n = s.labs.length;
+    const d = s.labs.filter(l=>l.st===2).length;
+    const w = s.labs.filter(l=>l.st===1).length;
+    const name = editing===s.id ? `<input type="text" id="editInput" value="${esc(s.name)}" maxlength="120">`
+      : `<button class="exp" data-act="labs" data-id="${s.id}" title="Лаби">${isOpen?'▾':'▸'}</button><span>${esc(s.name)}</span>`;
+    const segs = n ? s.labs.slice(0,8).map(l=>`<i class="s${l.st}" title="${esc(l.name)}: ${LAB_LABELS[l.st]}"></i>`).join('') + (n>8?`<em>+${n-8}</em>`:'') + `<span class="cnt">${d}/${n}</span>`
+      : `<button class="icon" data-act="labs" data-id="${s.id}" style="font-size:12px;padding:4px 6px">+ додати лаби</button>`;
+    const chip = s.done ? `<span class="chip ok">● Закрито</span>` : w ? `<span class="chip wait">Захист: ${w}</span>` : `<span class="chip no">○ Не закрито</span>`;
+    return `<div class="tr ${s.done?'done':''}">
+      <div class="c1"><button class="check ${s.done?'on':''}" data-act="toggle" data-id="${s.id}" title="${s.done?'Позначити як не закритий':'Позначити як закритий'}">${s.done?'✓':''}</button></div>
+      <div class="c2 nm">${name}</div>
+      <div class="c3 segs">${segs}</div>
+      <div class="c4">${chip}</div>
+      <div class="c5">${tools(s.id)}</div>
+    </div>
+    ${isOpen ? `<div class="labs">
+      ${s.labs.map(labHtml).join('')}
+      <form class="addlab" data-id="${s.id}">
+        <input type="text" placeholder="Назва лаби (можна залишити порожнім)" maxlength="120" autocomplete="off">
+        <button type="submit">+ Лаба</button>
+      </form>
+      <div class="hint">Натискай на статус лаби: Не здав → Треба захист → Захистив</div>
+    </div>` : ''}`;
+  }
+
+  function labHtml(l){
+    const nm = editing===l.id ? `<input type="text" id="editInput" value="${esc(l.name)}" maxlength="120">` : esc(l.name);
+    return `<div class="lab s${l.st}">
+      <span class="ldot"></span>
+      <div class="ln">${nm}</div>
+      <button class="lst" data-act="labst" data-id="${l.id}">${LAB_LABELS[l.st]}</button>
+      ${tools(l.id)}
+    </div>`;
+  }
+
+  function bind(){
+    $('#addForm').onsubmit = e => {
+      e.preventDefault();
+      const v = $('#newName').value.trim();
+      if(!v) return;
+      state.subjects.push({id:uid(), name:v, done:false, labs:[]});
+      if(filter!=='all' && filter!=='todo') filter='all';
+      render(); persist();
+      $('#newName').focus();
+    };
+    document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { filter=b.dataset.f; render(); });
+    document.querySelectorAll('#app [data-act]').forEach(b => b.onclick = () => act(b.dataset.act, b.dataset.id));
+    document.querySelectorAll('form.addlab').forEach(f => f.onsubmit = e => {
+      e.preventDefault();
+      const s = findSubj(f.dataset.id); if(!s) return;
+      const v = f.querySelector('input').value.trim();
+      s.labs.push({id:uid(), name: v || ('Лаба ' + (s.labs.length + 1)), st:0});
+      render(); persist();
+      const again = document.querySelector(`form.addlab[data-id="${s.id}"] input`); if(again) again.focus();
+    });
+    const ed = $('#editInput');
+    if(ed){
+      ed.focus(); ed.select();
+      let finished = false;
+      const save = () => {
+        if(finished) return; finished = true;
+        const v = ed.value.trim();
+        if(v){ const s=findSubj(editing); if(s) s.name=v; else { const [,l]=findLab(editing); if(l) l.name=v; } persist(); }
+        editing=null; render();
+      };
+      ed.onkeydown = e => { if(e.key==='Enter') save(); if(e.key==='Escape'){ finished=true; editing=null; render(); } };
+      ed.onblur = save;
+    }
+  }
+
+  function act(a, id){
+    if(a==='toggle'){ const s=findSubj(id); if(s){ s.done=!s.done; persist(); } }
+    if(a==='labs'){ open.has(id) ? open.delete(id) : open.add(id); }
+    if(a==='labst'){ const [,l]=findLab(id); if(l){ l.st=(l.st+1)%3; persist(); } }
+    if(a==='edit'){ editing=id; deleting=null; }
+    if(a==='del'){ deleting=id; editing=null; }
+    if(a==='del-no'){ deleting=null; }
+    if(a==='del-yes'){
+      const before = state.subjects.length;
+      state.subjects = state.subjects.filter(x=>x.id!==id);
+      if(state.subjects.length===before) state.subjects.forEach(s => s.labs = s.labs.filter(l=>l.id!==id));
+      open.delete(id); deleting=null; persist();
+    }
+    render();
+  }
+
+  // ---------- Старт ----------
+  (async () => {
+    if(!sb){ renderSetup(); return; }
+    const { data } = await sb.auth.getSession();
+    if(data && data.session){ user = data.session.user; await afterLogin(); }
+    else renderLogin();
+  })();
+})();
+</script>
+</body>
+</html>
